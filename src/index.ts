@@ -1,5 +1,5 @@
 import chalk from "chalk";
-import { run } from "./modules/transfer-fee";
+import { run } from "./modules/close-mint";
 
 // run module code
 run()

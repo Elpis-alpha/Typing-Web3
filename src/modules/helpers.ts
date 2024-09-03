@@ -13,6 +13,7 @@ import {
 import chalk from "chalk";
 import Irys from "@irys/sdk";
 import fs from "fs";
+import { requestAndConfirmAirdrop } from "@solana-developers/helpers";
 
 export const mainPublicKey = new PublicKey(
   "47iCpoU7bscsdHJ26ZHtTFDvRD1JWHZAr7u1n4ALD4Eu"
@@ -56,6 +57,17 @@ export const explorerLinkLog = (
 
 export const shortenAddress = (address: string, chars = 4) => {
   return `${address.slice(0, chars)}...${address.slice(-chars)}`;
+};
+
+export const createAndAirdropKeypair = async (
+  connection: Connection
+): Promise<Keypair> => {
+  const keypair = Keypair.generate();
+  console.log("\nPublic key:", chalk.yellow(keypair.publicKey.toBase58()));
+  console.log("Secret key:", chalk.yellow(keypair.secretKey.toString()));
+
+  await connection.requestAirdrop(keypair.publicKey, LAMPORTS_PER_SOL * 10);
+  return keypair;
 };
 
 export const getBalanceInSOL = async (
