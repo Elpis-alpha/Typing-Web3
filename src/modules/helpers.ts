@@ -1,5 +1,7 @@
-import { createCreateMetadataAccountV3Instruction } from "@metaplex-foundation/mpl-token-metadata";
+// @ts-ignore
+import { createMetadataAccountV3Instruction } from "@metaplex-foundation/mpl-token-metadata";
 import {
+  clusterApiUrl,
   Connection,
   Keypair,
   LAMPORTS_PER_SOL,
@@ -9,6 +11,8 @@ import {
   Transaction,
 } from "@solana/web3.js";
 import chalk from "chalk";
+import Irys from "@irys/sdk";
+import fs from "fs";
 
 export const mainPublicKey = new PublicKey(
   "47iCpoU7bscsdHJ26ZHtTFDvRD1JWHZAr7u1n4ALD4Eu"
@@ -30,6 +34,8 @@ const TOKEN_METADATA_PROGRAM_ID = new PublicKey(
   "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s"
 );
 
+export const localConnectionURL = "http://127.0.0.1:8899";
+
 const imageURL =
   "https://arweave.net/o2HYz76cY8rdGyj-N09ogXioRCe74yMBZZ8nO4fsRzc";
 
@@ -50,7 +56,7 @@ export const explorerLinkLog = (
 
 export const shortenAddress = (address: string, chars = 4) => {
   return `${address.slice(0, chars)}...${address.slice(-chars)}`;
-}
+};
 
 export const getBalanceInSOL = async (
   connection: Connection,
@@ -121,23 +127,22 @@ export const createTokenMetaData = async (
 
   const transaction = new Transaction();
 
-  const createMetadataAccountInstruction =
-    createCreateMetadataAccountV3Instruction(
-      {
-        metadata: metadataPDA,
-        mint: tokenMintAccount,
-        mintAuthority: owner.publicKey,
-        payer: owner.publicKey,
-        updateAuthority: owner.publicKey,
+  const createMetadataAccountInstruction = createMetadataAccountV3Instruction(
+    {
+      metadata: metadataPDA,
+      mint: tokenMintAccount,
+      mintAuthority: owner.publicKey,
+      payer: owner.publicKey,
+      updateAuthority: owner.publicKey,
+    },
+    {
+      createMetadataAccountArgsV3: {
+        collectionDetails: null,
+        data: metadataData,
+        isMutable: true,
       },
-      {
-        createMetadataAccountArgsV3: {
-          collectionDetails: null,
-          data: metadataData,
-          isMutable: true,
-        },
-      }
-    );
+    }
+  );
 
   transaction.add(createMetadataAccountInstruction);
 
@@ -149,3 +154,77 @@ export const createTokenMetaData = async (
 
   return transactionSignature;
 };
+
+//  metadata-extension helper functions
+export interface CreateNFTInputs {
+  payer: Keypair;
+  connection: Connection;
+  tokenName: string;
+  tokenSymbol: string;
+  tokenUri: string;
+  tokenAdditionalMetadata?: Record<string, string>;
+}
+
+export interface UploadOffChainMetadataInputs {
+  tokenName: string;
+  tokenSymbol: string;
+  tokenDescription: string;
+  tokenExternalUrl: string;
+  tokenAdditionalMetadata?: Record<string, string>;
+  imagePath: string;
+  metadataPath: string;
+}
+
+function formatIrysUrl(id: string) {
+  return `https://gateway.irys.xyz/${id}`;
+}
+
+const getIrysArweave = async (secretKey: Uint8Array) => {
+  const irys = new Irys({
+    network: "devnet",
+    token: "solana",
+    key: secretKey,
+    config: {
+      providerUrl: clusterApiUrl("devnet"),
+    },
+  });
+  return irys;
+};
+
+export async function uploadOffChainMetadata(
+  inputs: UploadOffChainMetadataInputs,
+  payer: Keypair
+) {
+  const {
+    tokenName,
+    tokenSymbol,
+    tokenDescription,
+    tokenExternalUrl,
+    imagePath,
+    tokenAdditionalMetadata,
+    metadataPath,
+  } = inputs;
+
+  const irys = await getIrysArweave(payer.secretKey);
+
+  const imageUploadReceipt = await irys.uploadFile(imagePath);
+
+  const metadata = {
+    name: tokenName,
+    symbol: tokenSymbol,
+    description: tokenDescription,
+    external_url: tokenExternalUrl,
+    image: formatIrysUrl(imageUploadReceipt.id),
+    attributes: Object.entries(tokenAdditionalMetadata || []).map(
+      ([trait_type, value]) => ({ trait_type, value })
+    ),
+  };
+
+  fs.writeFileSync(metadataPath, JSON.stringify(metadata, null, 4), {
+    flag: "w",
+  });
+
+  const metadataUploadReceipt = await irys.uploadFile(metadataPath);
+
+  return formatIrysUrl(metadataUploadReceipt.id);
+}

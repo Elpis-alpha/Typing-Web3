@@ -1,5 +1,5 @@
 import { clusterApiUrl, Connection, PublicKey } from "@solana/web3.js";
-import { mainPublicKey } from "./helpers";
+import { localConnectionURL, mainPublicKey } from "./helpers";
 import { getKeypairFromEnvironment } from "@solana-developers/helpers";
 import {
   getOrCreateAssociatedTokenAccount,
@@ -8,7 +8,8 @@ import {
 } from "@solana/spl-token";
 
 export const run = async () => {
-  const connection = new Connection(clusterApiUrl("devnet"));
+  // const connection = new Connection(clusterApiUrl("devnet"));
+  const connection = new Connection(localConnectionURL);
   const u2 = getKeypairFromEnvironment("SECRET_KEY");
   const u3 = getKeypairFromEnvironment("SECRET_KEY_2");
 

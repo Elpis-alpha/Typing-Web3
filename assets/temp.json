@@ -1,0 +1,17 @@
+{
+    "name": "Cat NFT",
+    "symbol": "EMB",
+    "description": "This is a cat",
+    "external_url": "https://solana.com/",
+    "image": "https://gateway.irys.xyz/jWt-7n_Oq53Xj1_Gfk2LNgMdilJYGZFCkIuEQYG5P30",
+    "attributes": [
+        {
+            "trait_type": "species",
+            "value": "Cat"
+        },
+        {
+            "trait_type": "breed",
+            "value": "Cool"
+        }
+    ]
+}
