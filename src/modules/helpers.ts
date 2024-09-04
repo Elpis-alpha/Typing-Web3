@@ -13,7 +13,10 @@ import {
 import chalk from "chalk";
 import Irys from "@irys/sdk";
 import fs from "fs";
-import { requestAndConfirmAirdrop } from "@solana-developers/helpers";
+import {
+  getKeypairFromEnvironment,
+  requestAndConfirmAirdrop,
+} from "@solana-developers/helpers";
 
 export const mainPublicKey = new PublicKey(
   "47iCpoU7bscsdHJ26ZHtTFDvRD1JWHZAr7u1n4ALD4Eu"
@@ -68,6 +71,47 @@ export const createAndAirdropKeypair = async (
 
   await connection.requestAirdrop(keypair.publicKey, LAMPORTS_PER_SOL * 10);
   return keypair;
+};
+
+type cType = "local" | "dev" | "main" | "test";
+export const initializeModule = async (connectionType: cType) => {
+  let connectionURL = "";
+
+  switch (connectionType) {
+    case "local":
+      connectionURL = localConnectionURL;
+    case "dev":
+      connectionURL = clusterApiUrl("devnet");
+    case "main":
+      connectionURL = clusterApiUrl("mainnet-beta");
+    case "test":
+      connectionURL = clusterApiUrl("testnet");
+    default:
+      connectionURL = localConnectionURL;
+  }
+
+  const connection = new Connection(connectionURL, "confirmed");
+  console.log(`\nConnection to ${connectionType}net cluster established`);
+
+  const u2 = getKeypairFromEnvironment("SECRET_KEY");
+  console.log("\nu2:", chalk.yellow(u2.publicKey.toBase58()));
+
+  const balance = await getBalanceInSOL(connection, u2.publicKey, false);
+  console.log("bal:", chalk.yellow(balance));
+
+  const u3 = getKeypairFromEnvironment("SECRET_KEY_2");
+  console.log("\nu3:", chalk.yellow(u3.publicKey.toBase58()));
+
+  const balance2 = await getBalanceInSOL(connection, u3.publicKey, false);
+  console.log("bal:", chalk.yellow(balance2));
+
+  const u4 = getKeypairFromEnvironment("SECRET_KEY_3");
+  console.log("\nu4:", chalk.yellow(u4.publicKey.toBase58()));
+
+  const balance3 = await getBalanceInSOL(connection, u4.publicKey, false);
+  console.log("bal:", chalk.yellow(balance3));
+
+  return { connection, u2, u3, u4 };
 };
 
 export const getBalanceInSOL = async (
